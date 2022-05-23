@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Covid·Info — Conoce el virus. Protege a los tuyos.</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: '#1a3eb8',
+            pink: { hot: '#e8005a', light: '#ff9ec4', pale: '#fff0f5' },
+            teal: { brand: '#3ab8cc', light: '#d0f4f9' },
+          },
+          fontFamily: {
+            display: ['"Plus Jakarta Sans"', 'sans-serif'],
+            body: ['"DM Sans"', 'sans-serif'],
+          },
+          animation: {
+            'float': 'float 6s ease-in-out infinite',
+            'float-slow': 'float 9s ease-in-out infinite',
+            'pulse-ring': 'pulseRing 2.5s ease-out infinite',
+            'spin-slow': 'spin 20s linear infinite',
+            'fade-up': 'fadeUp 0.7s ease forwards',
+          },
+          keyframes: {
+            float: {
+              '0%,100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-18px)' },
+            },
+            pulseRing: {
+              '0%': { transform: 'scale(0.9)', opacity: '0.8' },
+              '70%': { transform: 'scale(1.3)', opacity: '0' },
+              '100%': { transform: 'scale(1.3)', opacity: '0' },
+            },
+            fadeUp: {
+              from: { opacity: '0', transform: 'translateY(30px)' },
+              to:   { opacity: '1', transform: 'translateY(0)' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; overflow-x: hidden; background: #fafbff; }
+
+    /* ── MOLÉCULA DECORATIVA ── */
+    .molecule { position: absolute; pointer-events: none; }
+    .mol-core { border-radius: 50%; }
+    .mol-spike { position: absolute; border-radius: 50%; background: currentColor; }
+
+    /* ── FONDO DE MALLA DEGRADADA ── */
+    .mesh-bg {
+      background: radial-gradient(ellipse at 20% 30%, rgba(58,184,204,.18) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 70%, rgba(232,0,90,.12) 0%, transparent 55%),
+                  radial-gradient(ellipse at 50% 10%, rgba(26,62,184,.10) 0%, transparent 50%),
+                  #fafbff;
+    }
+
+    /* ── HOVER DE TARJETA ── */
+    .card-hover { transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s ease; }
+    .card-hover:hover { transform: translateY(-6px); box-shadow: 0 24px 60px rgba(26,62,184,.14); }
+
+    /* ── REVELADO AL DESPLAZARSE (inicial) ── */
+    .reveal { opacity: 0; transform: translateY(40px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-left { opacity: 0; transform: translateX(-40px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
+    .reveal-left.visible { opacity: 1; transform: translateX(0); }
+    .reveal-right { opacity: 0; transform: translateX(40px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
+    .reveal-right.visible { opacity: 1; transform: translateX(0); }
+
+    /* ── ESCALONADO ── */
+    .stagger-1 { transition-delay: .1s; }
+    .stagger-2 { transition-delay: .2s; }
+    .stagger-3 { transition-delay: .3s; }
+    .stagger-4 { transition-delay: .4s; }
+    .stagger-5 { transition-delay: .5s; }
+    .stagger-6 { transition-delay: .6s; }
+
+    /* ── ETIQUETA PÍLDORA ── */
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+
+    /* ── TEXTO DEGRADADO HÉROE ── */
+    .grad-text { background: linear-gradient(135deg, #e8005a 0%, #ff9ec4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .navy-text { color: #1a3eb8; }
+
+    /* ── LÍNEA DE PASO ── */
+    .step-line { position: relative; }
+    .step-line::before { content:''; position:absolute; left:28px; top:60px; bottom:-20px; width:2px; background: linear-gradient(to bottom, #3ab8cc44, transparent); }
+
+    /* ── NAVEGACIÓN VIDRIO ── */
+    nav { backdrop-filter: blur(14px); background: rgba(255,255,255,.85); }
+
+    /* ── FORMAS FLOTANTES ── */
+    @keyframes blobDrift { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(20px,-15px) scale(1.04)} 66%{transform:translate(-15px,10px) scale(.97)} }
+    .blob { animation: blobDrift 12s ease-in-out infinite; }
+    .blob-2 { animation: blobDrift 15s ease-in-out infinite reverse; }
+  </style>
+</head>
+<body class="mesh-bg">
+
+<!-- ══════════════════════════════════════
+     NAVBAR
+══════════════════════════════════════ -->
+<nav class="sticky top-0 z-50 border-b border-slate-100 shadow-sm">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <!-- Logotipo -->
+    <div class="flex items-center gap-2">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black" style="background:#1a3eb8">C19</div>
+      <span class="font-display font-800 text-slate-800 text-lg tracking-tight">Covid<span class="text-pink-hot">·</span>Info</span>
+    </div>
+    <!-- Vínculos -->
+    <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
+      <a href="#que-es" class="hover:text-navy transition-colors">¿Qué es?</a>
+      <a href="#sintomas" class="hover:text-navy transition-colors">Síntomas</a>
+      <a href="#proteccion" class="hover:text-navy transition-colors">Protégete</a>
+      <a href="#vacunas" class="hover:text-navy transition-colors">Vacunas</a>
+      <a href="#recursos" class="hover:text-navy transition-colors">Recursos</a>
+    </div>
+    <a href="#recursos" class="hidden md:inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-white text-sm font-semibold transition-all hover:scale-105 hover:shadow-lg" style="background: linear-gradient(135deg,#e8005a,#1a3eb8)">
+      Ver fuentes →
+    </a>
+    <!-- Botón hamburguesa móvil -->
+    <button class="md:hidden p-2 rounded-lg text-slate-600">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════
+     HERO
+══════════════════════════════════════ -->
+<section class="relative min-h-screen flex items-center overflow-hidden pt-12 pb-24">
+
+  <!-- Manchas de fondo -->
+  <div class="blob absolute top-0 right-0 w-[600px] h-[600px] rounded-full opacity-20 -translate-y-1/4 translate-x-1/4" style="background:radial-gradient(circle,#3ab8cc,transparent 70%)"></div>
+  <div class="blob-2 absolute bottom-0 left-0 w-[500px] h-[500px] rounded-full opacity-15 translate-y-1/4 -translate-x-1/4" style="background:radial-gradient(circle,#e8005a,transparent 70%)"></div>
+
+  <!-- Molécula decorativa arriba a la derecha -->
+  <svg class="absolute top-20 right-[5%] w-28 h-28 opacity-20 animate-spin-slow" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="50" cy="50" r="16" fill="#1a3eb8"/>
+    <circle cx="50" cy="18" r="6" fill="#1a3eb8"/><circle cx="50" cy="82" r="6" fill="#1a3eb8"/>
+    <circle cx="18" cy="50" r="6" fill="#1a3eb8"/><circle cx="82" cy="50" r="6" fill="#1a3eb8"/>
+    <circle cx="27" cy="27" r="5" fill="#3ab8cc"/><circle cx="73" cy="73" r="5" fill="#3ab8cc"/>
+    <circle cx="73" cy="27" r="5" fill="#e8005a"/><circle cx="27" cy="73" r="5" fill="#e8005a"/>
+    <line x1="50" y1="34" x2="50" y2="24" stroke="#1a3eb8" stroke-width="2"/>
+    <line x1="50" y1="66" x2="50" y2="76" stroke="#1a3eb8" stroke-width="2"/>
+    <line x1="34" y1="50" x2="24" y2="50" stroke="#1a3eb8" stroke-width="2"/>
+    <line x1="66" y1="50" x2="76" y2="50" stroke="#1a3eb8" stroke-width="2"/>
+    <line x1="39" y1="39" x2="32" y2="32" stroke="#3ab8cc" stroke-width="2"/>
+    <line x1="61" y1="61" x2="68" y2="68" stroke="#3ab8cc" stroke-width="2"/>
+    <line x1="61" y1="39" x2="68" y2="32" stroke="#e8005a" stroke-width="2"/>
+    <line x1="39" y1="61" x2="32" y2="68" stroke="#e8005a" stroke-width="2"/>
+  </svg>
+  <!-- Molécula abajo a la izquierda -->
+  <svg class="absolute bottom-24 left-[3%] w-20 h-20 opacity-15 animate-float-slow" viewBox="0 0 100 100" fill="none">
+    <circle cx="50" cy="50" r="16" fill="#e8005a"/>
+    <circle cx="50" cy="18" r="6" fill="#e8005a"/><circle cx="50" cy="82" r="6" fill="#e8005a"/>
+    <circle cx="18" cy="50" r="6" fill="#ff9ec4"/><circle cx="82" cy="50" r="6" fill="#ff9ec4"/>
+    <line x1="50" y1="34" x2="50" y2="24" stroke="#e8005a" stroke-width="2"/>
+    <line x1="50" y1="66" x2="50" y2="76" stroke="#e8005a" stroke-width="2"/>
+    <line x1="34" y1="50" x2="24" y2="50" stroke="#ff9ec4" stroke-width="2"/>
+    <line x1="66" y1="50" x2="76" y2="50" stroke="#ff9ec4" stroke-width="2"/>
+  </svg>
+
+  <div class="max-w-7xl mx-auto px-6 w-full grid lg:grid-cols-2 gap-16 items-center">
+
+    <!-- Izquierda: Texto -->
+    <div class="space-y-8">
+      <div class="badge bg-pink-pale border border-pink-light text-pink-hot" style="color:#e8005a;background:#fff0f5;border-color:#ff9ec4">
+        <span class="w-2 h-2 rounded-full bg-pink-hot inline-block" style="background:#e8005a"></span>
+        Actualización de salud pública · 2026
+      </div>
+
+      <h1 class="font-display font-extrabold text-slate-900 leading-[1.08]" style="font-size:clamp(2.6rem,5vw,4.2rem)">
+        Conoce el virus.<br>
+        <span class="grad-text">Protege</span> a las<br>
+        personas a tu<br>alrededor<span style="color:#1a3eb8">.</span>
+      </h1>
+
+      <p class="text-slate-500 text-lg leading-relaxed max-w-md">
+        Información clara y verificada sobre el COVID-19 — qué es, cómo se transmite, los síntomas que debes vigilar y los pasos simples que mantienen a salvo a tu comunidad.
+      </p>
+
+      <div class="flex flex-wrap gap-4">
+        <a href="#sintomas" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-white font-semibold text-base shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95" style="background:linear-gradient(135deg,#e8005a,#c0004a)">
+          Revisar síntomas →
+        </a>
+        <a href="#proteccion" class="inline-flex items-center gap-2 px-7 py-3.5 rounded-full text-slate-700 font-semibold text-base border-2 border-slate-200 hover:border-navy hover:text-navy transition-all">
+          Cómo protegerme
+        </a>
+      </div>
+
+      <!-- Barra de confianza -->
+      <div class="flex items-center gap-3">
+        <div class="flex -space-x-1.5">
+          <div class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white" style="background:#1a3eb8">OMS</div>
+          <div class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white" style="background:#3ab8cc">OPS</div>
+          <div class="w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs font-bold text-white" style="background:#e8005a">SS</div>
+        </div>
+        <p class="text-slate-500 text-sm">Revisado con guías de la <strong class="text-slate-700">OMS</strong> y <strong class="text-slate-700">salud nacional</strong></p>
+      </div>
+    </div>
+
+    <!-- Derecha: Ilustración héroe y estadísticas -->
+    <div class="relative flex flex-col gap-5">
+
+      <!-- Ilustración héroe -->
+      <div class="animate-float relative rounded-3xl overflow-hidden shadow-2xl" style="height:420px;">
+        <img src="assets/image/Coronavirus.jpg" alt="Ilustración Coronavirus" class="w-full h-full object-cover">
+        <!-- Degradado de superposición decorativo -->
+        <div class="absolute inset-0 pointer-events-none" style="background:linear-gradient(to top, rgba(26,62,184,.06) 0%, transparent 60%)"></div>
+      </div>
+
+      <!-- Chips de estadísticas flotando alrededor de la tarjeta -->
+      <div class="absolute -top-3 left-3 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3" style="border-left:4px solid #3ab8cc">
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Respiración</p>
+          <p class="text-sm font-bold text-slate-800">Monitorea diario</p>
+        </div>
+      </div>
+      <div class="absolute -bottom-3 -right-3 bg-white rounded-2xl shadow-lg px-4 py-3 flex items-center gap-3">
+        <svg class="w-7 h-7" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="#3ab8cc" stroke-width="2"/><path d="M10 16l4 4 8-8" stroke="#1a3eb8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Vacuna</p>
+          <p class="text-sm font-bold text-slate-800">Mantente al día</p>
+        </div>
+      </div>
+      <div class="absolute top-1/2 -right-5 -translate-y-1/2 bg-white rounded-2xl shadow-lg px-4 py-3">
+        <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400">R₀ · Transmisión</p>
+        <p class="font-display font-black text-2xl" style="color:#e8005a">2.5</p>
+        <p class="text-[10px] text-slate-400">promedio respiratorio</p>
+      </div>
+
+      <!-- Fila de información inferior -->
+      <div class="grid grid-cols-3 gap-3">
+        <div class="bg-white/70 backdrop-blur rounded-2xl p-4 text-center shadow-sm border border-white">
+          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Incubación</p>
+          <p class="font-display font-bold text-slate-800 text-sm">2–14 días</p>
+        </div>
+        <div class="bg-white/70 backdrop-blur rounded-2xl p-4 text-center shadow-sm border border-white">
+          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Vía principal</p>
+          <p class="font-display font-bold text-sm" style="color:#e8005a">Gotas aéreas</p>
+        </div>
+        <div class="bg-white/70 backdrop-blur rounded-2xl p-4 text-center shadow-sm border border-white">
+          <p class="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1">Prevención</p>
+          <p class="font-display font-bold text-sm" style="color:#3ab8cc">Vacuna + higiene</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     ¿QUÉ ES COVID-19?
+══════════════════════════════════════ -->
+<section id="que-es" class="py-28 relative overflow-hidden">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+      <!-- Izquierda: tarjeta visual grande -->
+      <div class="reveal-left relative">
+        <div class="rounded-3xl p-10 relative overflow-hidden" style="background:linear-gradient(135deg,#1a3eb8 0%,#0f2880 100%); min-height:400px">
+          <!-- Superposición de textura ruido blanco -->
+          <div class="absolute inset-0 opacity-5" style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><filter id=%22n%22><feTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22/></filter><rect width=%2260%22 height=%2260%22 filter=%22url(%23n)%22 opacity=%221%22/></svg>')"></div>
+
+          <!-- Ilustración de molécula en SVG -->
+          <svg class="absolute right-6 bottom-6 w-48 h-48 opacity-20 animate-spin-slow" viewBox="0 0 200 200" fill="none">
+            <circle cx="100" cy="100" r="32" fill="white"/>
+            <circle cx="100" cy="36" r="12" fill="white"/><circle cx="100" cy="164" r="12" fill="white"/>
+            <circle cx="36" cy="100" r="12" fill="white"/><circle cx="164" cy="100" r="12" fill="white"/>
+            <circle cx="55" cy="55" r="10" fill="white" opacity=".7"/><circle cx="145" cy="145" r="10" fill="white" opacity=".7"/>
+            <circle cx="145" cy="55" r="10" fill="white" opacity=".7"/><circle cx="55" cy="145" r="10" fill="white" opacity=".7"/>
+            <line x1="100" y1="68" x2="100" y2="48" stroke="white" stroke-width="3"/>
+            <line x1="100" y1="132" x2="100" y2="152" stroke="white" stroke-width="3"/>
+            <line x1="68" y1="100" x2="48" y2="100" stroke="white" stroke-width="3"/>
+            <line x1="132" y1="100" x2="152" y2="100" stroke="white" stroke-width="3"/>
+            <line x1="77" y1="77" x2="65" y2="65" stroke="white" stroke-width="3" opacity=".7"/>
+            <line x1="123" y1="123" x2="135" y2="135" stroke="white" stroke-width="3" opacity=".7"/>
+            <line x1="123" y1="77" x2="135" y2="65" stroke="white" stroke-width="3" opacity=".7"/>
+            <line x1="77" y1="123" x2="65" y2="135" stroke="white" stroke-width="3" opacity=".7"/>
+          </svg>
+
+          <div class="relative z-10 space-y-6">
+            <div class="badge text-white/60 border border-white/20" style="color:rgba(255,255,255,.7)">
+              <span class="w-2 h-2 rounded-full bg-teal-brand inline-block" style="background:#3ab8cc"></span>
+              Coronavirus · SARS-CoV-2
+            </div>
+            <h2 class="font-display font-extrabold text-white text-4xl leading-tight">Una familia<br>de virus que<br>evolucionan</h2>
+            <p class="text-white/70 text-base leading-relaxed max-w-xs">
+              Desde el brote de 2019, el SARS-CoV-2 ha desarrollado múltiples variantes. Entender su biología nos ayuda a anticipar sus efectos.
+            </p>
+            <div class="flex gap-3 flex-wrap">
+              <span class="px-4 py-2 rounded-full text-xs font-semibold" style="background:rgba(58,184,204,.25);color:#7eeaf5">Alfa</span>
+              <span class="px-4 py-2 rounded-full text-xs font-semibold" style="background:rgba(232,0,90,.25);color:#ff9ec4">Delta</span>
+              <span class="px-4 py-2 rounded-full text-xs font-semibold" style="background:rgba(255,255,255,.15);color:white">Ómicron</span>
+              <span class="px-4 py-2 rounded-full text-xs font-semibold" style="background:rgba(255,255,255,.15);color:white">JN.1 +</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Derecha: texto y datos clave -->
+      <div class="reveal space-y-8">
+        <div>
+          <div class="badge mb-4" style="background:#e8f0ff;color:#1a3eb8;border:none">¿Qué es?</div>
+          <h2 class="font-display font-extrabold text-slate-900 text-4xl leading-tight mb-5">
+            El COVID-19 en<br><span style="color:#1a3eb8">palabras simples</span>
+          </h2>
+          <p class="text-slate-500 text-lg leading-relaxed">
+            El COVID-19 es una enfermedad infecciosa causada por el coronavirus SARS-CoV-2. Se transmite principalmente a través de gotículas respiratorias cuando una persona infectada habla, tose o estornuda.
+          </p>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Elementos de datos -->
+          <div class="flex items-start gap-4 p-5 rounded-2xl bg-white shadow-sm border border-slate-100 card-hover">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#e8f0ff">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#1a3eb8" stroke-width="2"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-800 mb-1">Período de incubación</h4>
+              <p class="text-slate-500 text-sm">Los síntomas aparecen entre <strong>2 y 14 días</strong> después de la exposición. El período más común es de 5 días.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-5 rounded-2xl bg-white shadow-sm border border-slate-100 card-hover">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#fff0f5">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#e8005a" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-800 mb-1">Alta contagiosidad</h4>
+              <p class="text-slate-500 text-sm">Una persona infectada puede contagiar en promedio a <strong>2–3 personas</strong> sin medidas de protección.</p>
+            </div>
+          </div>
+          <div class="flex items-start gap-4 p-5 rounded-2xl bg-white shadow-sm border border-slate-100 card-hover">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:#d0f4f9">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#3ab8cc" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+            </div>
+            <div>
+              <h4 class="font-semibold text-slate-800 mb-1">Mayormente tratable</h4>
+              <p class="text-slate-500 text-sm">La gran mayoría de los casos son leves o moderados. Las vacunas reducen drásticamente el riesgo de enfermedad grave.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     SÍNTOMAS
+══════════════════════════════════════ -->
+<section id="sintomas" class="py-28" style="background:linear-gradient(180deg,#fafbff 0%,#f0f4ff 100%)">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16 reveal">
+      <div class="badge mb-4" style="background:#fff0f5;color:#e8005a;border:none">Señales de alerta</div>
+      <h2 class="font-display font-extrabold text-slate-900 text-4xl leading-tight mb-4">
+        Síntomas que debes<br><span style="color:#e8005a">conocer</span>
+      </h2>
+      <p class="text-slate-500 text-lg">Los síntomas pueden aparecer entre 2 y 14 días tras la exposición al virus. Algunos casos son asintomáticos.</p>
+    </div>
+
+    <!-- Cuadrícula de síntomas -->
+    <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+      <!-- Plantilla de tarjeta — 8 síntomas -->
+      <div class="reveal stagger-1 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#fff0f5,#ffd6e7)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#e8005a" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Fiebre alta</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Temperatura ≥ 38°C. Uno de los síntomas más comunes y tempranos.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#e8005a,#ff9ec4)"></div>
+      </div>
+
+      <div class="reveal stagger-2 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#e8f0ff,#c7d7ff)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#1a3eb8" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/><path d="M7 6s0 3 3 3 3-3 3-3"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Tos seca</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Tos persistente sin flema. Puede causar irritación en la garganta.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#1a3eb8,#3ab8cc)"></div>
+      </div>
+
+      <div class="reveal stagger-3 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#d0f4f9,#a8e8f2)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#3ab8cc" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Pérdida del olfato</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Anosmia o pérdida repentina del olfato y/o gusto, sin congestión nasal.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#3ab8cc,#a8e8f2)"></div>
+      </div>
+
+      <div class="reveal stagger-4 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#fff8e1,#ffe9a0)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Dolor en el pecho</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Sensación de presión o dolor en el pecho. Requiere atención médica.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#d97706,#fbbf24)"></div>
+      </div>
+
+      <div class="reveal stagger-1 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#f0fdf4,#bbf7d0)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Dificultad para respirar</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Falta de aire o sensación de ahogo. Síntoma grave que requiere atención urgente.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#16a34a,#4ade80)"></div>
+      </div>
+
+      <div class="reveal stagger-2 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#db2777" stroke-width="2"><path d="M9 9h.01M15 9h.01M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 15s1.5 2 4 2 4-2 4-2"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Dolor de cabeza</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Cefalea intensa frecuente, a veces acompañada de fatiga muscular.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#db2777,#f472b6)"></div>
+      </div>
+
+      <div class="reveal stagger-3 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Fatiga extrema</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Cansancio inusual que no mejora con el descanso. Puede ser prolongado (long COVID).</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#7c3aed,#a78bfa)"></div>
+      </div>
+
+      <div class="reveal stagger-4 bg-white rounded-3xl p-7 shadow-sm border border-slate-100 card-hover text-center">
+        <div class="w-14 h-14 rounded-2xl mx-auto mb-5 flex items-center justify-center" style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="#b45309" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3 class="font-display font-bold text-slate-800 text-base mb-2">Síntomas GI</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Náuseas, diarrea o vómitos. Presentes especialmente en niños y adultos mayores.</p>
+        <div class="mt-4 h-1 rounded-full" style="background:linear-gradient(90deg,#b45309,#fbbf24)"></div>
+      </div>
+    </div>
+
+    <!-- Alerta de emergencia -->
+    <div class="reveal mt-10 p-6 rounded-3xl flex items-start gap-5" style="background:linear-gradient(135deg,#fff0f5,#ffe4ec);border:1.5px solid #ffc0d1">
+      <div class="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style="background:#e8005a">
+        <svg class="w-6 h-6 text-white" fill="white" viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm0 3.5L20.5 19h-17L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
+      </div>
+      <div>
+        <h4 class="font-display font-bold text-slate-800 text-lg mb-1">⚠ Síntomas de emergencia — busca atención inmediata</h4>
+        <p class="text-slate-600 text-sm">Dificultad para respirar severa · Dolor de pecho persistente · Confusión o desorientación · Cianosis (labios o cara azulados) · Incapacidad para despertar o mantenerse despierto</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     CÓMO PROTEGERTE
+══════════════════════════════════════ -->
+<section id="proteccion" class="py-28">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-2xl mx-auto mb-16 reveal">
+      <div class="badge mb-4" style="background:#d0f4f9;color:#0e7490;border:none">Prevención</div>
+      <h2 class="font-display font-extrabold text-slate-900 text-4xl leading-tight mb-4">
+        Pasos que hacen la<br><span style="color:#3ab8cc">diferencia</span>
+      </h2>
+      <p class="text-slate-500 text-lg">Acciones simples y comprobadas que reducen significativamente tu riesgo y el de quienes te rodean.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-8">
+      <!-- Paso 1 -->
+      <div class="reveal stagger-1 step-line flex gap-6 p-7 bg-white rounded-3xl shadow-sm border border-slate-100 card-hover">
+        <div class="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg" style="background:linear-gradient(135deg,#1a3eb8,#3a5fd8)">01</div>
+        <div>
+          <h3 class="font-display font-bold text-slate-800 text-xl mb-2">Vacúnate y mantén tus dosis</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-4">Las vacunas aprobadas reducen en un <strong>85–95%</strong> el riesgo de hospitalización y muerte. Consulta el calendario de refuerzos con tu médico.</p>
+          <div class="flex items-center gap-2 text-xs font-semibold" style="color:#1a3eb8">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            Acción más efectiva disponible
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="reveal stagger-2 flex gap-6 p-7 bg-white rounded-3xl shadow-sm border border-slate-100 card-hover">
+        <div class="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg" style="background:linear-gradient(135deg,#e8005a,#ff3377)">02</div>
+        <div>
+          <h3 class="font-display font-bold text-slate-800 text-xl mb-2">Usa mascarilla en lugares cerrados</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-4">Las mascarillas N95 o KN95 ofrecen la mejor protección en espacios con poca ventilación o alta concurrencia de personas.</p>
+          <div class="flex items-center gap-2 text-xs font-semibold" style="color:#e8005a">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            Especialmente en temporada alta
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 3 -->
+      <div class="reveal stagger-3 flex gap-6 p-7 bg-white rounded-3xl shadow-sm border border-slate-100 card-hover">
+        <div class="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg" style="background:linear-gradient(135deg,#3ab8cc,#0e9bb0)">03</div>
+        <div>
+          <h3 class="font-display font-bold text-slate-800 text-xl mb-2">Lávate las manos frecuentemente</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-4">Al menos <strong>20 segundos</strong> con agua y jabón, o gel con al menos 60% de alcohol. Especialmente antes de tocarte la cara.</p>
+          <div class="flex items-center gap-2 text-xs font-semibold" style="color:#3ab8cc">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            Fácil y muy efectivo
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 4 -->
+      <div class="reveal stagger-4 flex gap-6 p-7 bg-white rounded-3xl shadow-sm border border-slate-100 card-hover">
+        <div class="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg" style="background:linear-gradient(135deg,#7c3aed,#9d60f0)">04</div>
+        <div>
+          <h3 class="font-display font-bold text-slate-800 text-xl mb-2">Ventila los espacios interiores</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-4">Abre ventanas o usa purificadores de aire HEPA. El virus se acumula en ambientes cerrados con mala circulación.</p>
+          <div class="flex items-center gap-2 text-xs font-semibold" style="color:#7c3aed">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            Clave en reuniones grupales
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 5 -->
+      <div class="reveal stagger-1 flex gap-6 p-7 bg-white rounded-3xl shadow-sm border border-slate-100 card-hover">
+        <div class="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg" style="background:linear-gradient(135deg,#d97706,#f59e0b)">05</div>
+        <div>
+          <h3 class="font-display font-bold text-slate-800 text-xl mb-2">Aíslate si presentas síntomas</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-4">Si tienes síntomas o resultado positivo, quédate en casa al menos <strong>5 días</strong> y evita el contacto con personas vulnerables.</p>
+          <div class="flex items-center gap-2 text-xs font-semibold" style="color:#d97706">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            Protege a quienes más lo necesitan
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 6 -->
+      <div class="reveal stagger-2 flex gap-6 p-7 bg-white rounded-3xl shadow-sm border border-slate-100 card-hover">
+        <div class="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center text-white font-display font-black text-lg" style="background:linear-gradient(135deg,#16a34a,#22c55e)">06</div>
+        <div>
+          <h3 class="font-display font-bold text-slate-800 text-xl mb-2">Hazte la prueba si tienes dudas</h3>
+          <p class="text-slate-500 text-sm leading-relaxed mb-4">Las pruebas de antígenos caseras están disponibles y son fáciles de usar. Consulta al médico ante cualquier resultado positivo.</p>
+          <div class="flex items-center gap-2 text-xs font-semibold" style="color:#16a34a">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+            Diagnóstico rápido = respuesta rápida
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     VACUNAS
+══════════════════════════════════════ -->
+<section id="vacunas" class="py-28 relative overflow-hidden" style="background:#0a1f6e">
+
+  <!-- Decoración de fondo -->
+  <div class="absolute inset-0 pointer-events-none overflow-hidden">
+    <div class="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10" style="background:radial-gradient(circle,#3ab8cc,transparent 70%)"></div>
+    <div class="absolute bottom-0 left-0 w-80 h-80 rounded-full opacity-10" style="background:radial-gradient(circle,#e8005a,transparent 70%)"></div>
+    <svg class="absolute right-10 top-10 w-40 h-40 opacity-10 animate-spin-slow" viewBox="0 0 100 100" fill="none">
+      <circle cx="50" cy="50" r="16" fill="white"/>
+      <circle cx="50" cy="18" r="6" fill="white"/><circle cx="50" cy="82" r="6" fill="white"/>
+      <circle cx="18" cy="50" r="6" fill="white"/><circle cx="82" cy="50" r="6" fill="white"/>
+      <line x1="50" y1="34" x2="50" y2="24" stroke="white" stroke-width="2"/>
+      <line x1="50" y1="66" x2="50" y2="76" stroke="white" stroke-width="2"/>
+      <line x1="34" y1="50" x2="24" y2="50" stroke="white" stroke-width="2"/>
+      <line x1="66" y1="50" x2="76" y2="50" stroke="white" stroke-width="2"/>
+    </svg>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-6 relative z-10">
+    <div class="text-center max-w-2xl mx-auto mb-16 reveal">
+      <div class="badge mb-4" style="background:rgba(58,184,204,.2);color:#7eeaf5;border:none">Inmunización</div>
+      <h2 class="font-display font-extrabold text-white text-4xl leading-tight mb-4">
+        La vacuna es tu<br><span style="color:#3ab8cc">mejor escudo</span>
+      </h2>
+      <p class="text-slate-300 text-lg">Las vacunas disponibles han demostrado seguridad y eficacia a través de miles de estudios clínicos.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-6 mb-12">
+      <div class="reveal stagger-1 p-8 rounded-3xl border border-white/10 card-hover" style="background:rgba(255,255,255,.07);backdrop-filter:blur(10px)">
+        <div class="text-5xl font-display font-black mb-3" style="color:#3ab8cc">95%</div>
+        <h3 class="text-white font-semibold text-lg mb-2">Eficacia contra hospitalización</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Las vacunas de ARNm redujeron significativamente los ingresos hospitalarios en poblaciones vacunadas.</p>
+      </div>
+      <div class="reveal stagger-2 p-8 rounded-3xl border border-white/10 card-hover" style="background:rgba(255,255,255,.07);backdrop-filter:blur(10px)">
+        <div class="text-5xl font-display font-black mb-3" style="color:#ff9ec4">13B+</div>
+        <h3 class="text-white font-semibold text-lg mb-2">Dosis aplicadas en el mundo</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Más de 13 mil millones de dosis administradas globalmente con un perfil de seguridad sólido.</p>
+      </div>
+      <div class="reveal stagger-3 p-8 rounded-3xl border border-white/10 card-hover" style="background:rgba(255,255,255,.07);backdrop-filter:blur(10px)">
+        <div class="text-5xl font-display font-black mb-3" style="color:#fbbf24">20M+</div>
+        <h3 class="text-white font-semibold text-lg mb-2">Vidas salvadas estimadas</h3>
+        <p class="text-slate-400 text-sm leading-relaxed">Según estudios independientes, la vacunación evitó millones de muertes en los primeros dos años.</p>
+      </div>
+    </div>
+
+    <!-- Llamada a la acción -->
+    <div class="reveal text-center">
+      <a href="#recursos" class="inline-flex items-center gap-3 px-8 py-4 rounded-full text-white font-semibold text-base transition-all hover:scale-105 hover:shadow-2xl" style="background:linear-gradient(135deg,#3ab8cc,#0e9bb0)">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+        Consulta el calendario de vacunación
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     COVID LARGO
+══════════════════════════════════════ -->
+<section class="py-28" style="background:linear-gradient(135deg,#fafbff,#f0f4ff)">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+      <div class="reveal">
+        <div class="badge mb-5" style="background:#fff0f5;color:#e8005a;border:none">COVID largo</div>
+        <h2 class="font-display font-extrabold text-slate-900 text-4xl leading-tight mb-6">
+          Los síntomas que<br>persisten más allá<br>de la infección
+        </h2>
+        <p class="text-slate-500 text-lg leading-relaxed mb-8">
+          El "COVID largo" se refiere a síntomas que permanecen más de 12 semanas después de la infección inicial, afectando a entre el 10–30% de los pacientes.
+        </p>
+        <div class="space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#e8005a"></div>
+            <p class="text-slate-600 text-sm">Fatiga crónica y niebla mental (brain fog)</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#1a3eb8"></div>
+            <p class="text-slate-600 text-sm">Dificultad para respirar después del esfuerzo</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#3ab8cc"></div>
+            <p class="text-slate-600 text-sm">Dolor muscular y articular persistente</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#7c3aed"></div>
+            <p class="text-slate-600 text-sm">Problemas del sueño, ansiedad y depresión</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="w-3 h-3 rounded-full flex-shrink-0" style="background:#d97706"></div>
+            <p class="text-slate-600 text-sm">Palpitaciones o taquicardia sin causa evidente</p>
+          </div>
+        </div>
+      </div>
+      <div class="reveal-right grid grid-cols-2 gap-5">
+        <div class="col-span-2 p-7 rounded-3xl" style="background:linear-gradient(135deg,#e8005a,#c0004a)">
+          <p class="text-white/80 text-xs uppercase tracking-widest font-semibold mb-2">Personas afectadas</p>
+          <p class="font-display font-black text-white text-4xl mb-1">1 de cada 5</p>
+          <p class="text-white/70 text-sm">adultos recuperados reportan síntomas persistentes a los 4 semanas.</p>
+        </div>
+        <div class="p-6 rounded-3xl bg-white shadow-sm border border-slate-100">
+          <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-2">Duración promedio</p>
+          <p class="font-display font-black text-slate-800 text-2xl" style="color:#1a3eb8">3–6 meses</p>
+          <p class="text-slate-500 text-xs mt-1">con variabilidad individual</p>
+        </div>
+        <div class="p-6 rounded-3xl bg-white shadow-sm border border-slate-100">
+          <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-2">Reducción</p>
+          <p class="font-display font-black text-2xl" style="color:#3ab8cc">50%</p>
+          <p class="text-slate-500 text-xs mt-1">con vacunación previa</p>
+        </div>
+        <div class="col-span-2 p-6 rounded-3xl" style="background:#e8f0ff">
+          <p class="font-semibold text-sm mb-1" style="color:#1a3eb8">💡 Consejo</p>
+          <p class="text-slate-600 text-sm leading-relaxed">Si sospechas que tienes COVID largo, busca atención médica especializada. Existen clínicas y protocolos de recuperación dedicados.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     RECURSOS / FAQ
+══════════════════════════════════════ -->
+<section id="recursos" class="py-28">
+  <div class="max-w-7xl mx-auto px-6">
+    <div class="text-center max-w-xl mx-auto mb-16 reveal">
+      <div class="badge mb-4" style="background:#d0f4f9;color:#0e7490;border:none">Preguntas frecuentes</div>
+      <h2 class="font-display font-extrabold text-slate-900 text-4xl leading-tight mb-4">
+        Dudas comunes<br>respondidas
+      </h2>
+    </div>
+
+    <div class="max-w-3xl mx-auto space-y-4 mb-20">
+      <!-- Elementos de preguntas frecuentes -->
+      <details class="reveal bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
+        <summary class="flex items-center justify-between p-6 cursor-pointer font-semibold text-slate-800 list-none">
+          ¿Puedo contagiarme si estoy vacunado?
+          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-6 pb-6 text-slate-500 text-sm leading-relaxed">
+          Sí, es posible contagiarse incluso estando vacunado. Sin embargo, la vacunación reduce considerablemente la probabilidad de enfermedad grave, hospitalización y muerte. Las variantes más recientes pueden evadir parte de la inmunidad, por eso los refuerzos son importantes.
+        </div>
+      </details>
+      <details class="reveal stagger-1 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
+        <summary class="flex items-center justify-between p-6 cursor-pointer font-semibold text-slate-800 list-none">
+          ¿Cuánto tiempo debo aislarme si doy positivo?
+          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-6 pb-6 text-slate-500 text-sm leading-relaxed">
+          Las guías actuales de la OMS recomiendan al menos 5 días de aislamiento desde el inicio de síntomas o desde el resultado positivo (si eres asintomático), y hasta que estés sin fiebre por 24 horas sin medicamento. Consulta siempre las indicaciones locales de salud.
+        </div>
+      </details>
+      <details class="reveal stagger-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
+        <summary class="flex items-center justify-between p-6 cursor-pointer font-semibold text-slate-800 list-none">
+          ¿Son seguros los niños con COVID-19?
+          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-6 pb-6 text-slate-500 text-sm leading-relaxed">
+          La mayoría de los niños tienen síntomas leves o son asintomáticos. Sin embargo, algunos pueden desarrollar el Síndrome Inflamatorio Multisistémico Pediátrico (SIM-C), una condición rara pero seria. La vacunación está disponible para niños a partir de cierta edad.
+        </div>
+      </details>
+      <details class="reveal stagger-3 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden group">
+        <summary class="flex items-center justify-between p-6 cursor-pointer font-semibold text-slate-800 list-none">
+          ¿Qué diferencia hay entre PCR y prueba de antígenos?
+          <svg class="w-5 h-5 text-slate-400 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-6 pb-6 text-slate-500 text-sm leading-relaxed">
+          La PCR es más sensible y precisa, detecta cantidades muy pequeñas del virus, pero tarda más (horas o días). La prueba de antígenos da resultado en 15–30 minutos y es útil para detección rápida, aunque puede tener falsos negativos en estadios tempranos.
+        </div>
+      </details>
+    </div>
+
+    <!-- Sección de fuentes -->
+    <div class="reveal">
+      <h3 class="font-display font-bold text-slate-800 text-2xl mb-6 text-center">Fuentes verificadas</h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <a href="https://www.who.int/es" target="_blank" class="flex items-center gap-3 p-5 bg-white rounded-2xl shadow-sm border border-slate-100 card-hover">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs text-white" style="background:#1a3eb8">OMS</div>
+          <div><p class="font-semibold text-slate-800 text-sm">Organización Mundial</p><p class="text-slate-400 text-xs">de la Salud</p></div>
+        </a>
+        <a href="https://www.paho.org/es" target="_blank" class="flex items-center gap-3 p-5 bg-white rounded-2xl shadow-sm border border-slate-100 card-hover">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs text-white" style="background:#3ab8cc">OPS</div>
+          <div><p class="font-semibold text-slate-800 text-sm">Organización Panamericana</p><p class="text-slate-400 text-xs">de la Salud</p></div>
+        </a>
+        <a href="https://www.cdc.gov/covid" target="_blank" class="flex items-center gap-3 p-5 bg-white rounded-2xl shadow-sm border border-slate-100 card-hover">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs text-white" style="background:#e8005a">CDC</div>
+          <div><p class="font-semibold text-slate-800 text-sm">Centers for Disease</p><p class="text-slate-400 text-xs">Control (EE.UU.)</p></div>
+        </a>
+        <a href="https://www.salud.gob.hn" target="_blank" class="flex items-center gap-3 p-5 bg-white rounded-2xl shadow-sm border border-slate-100 card-hover">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs text-white" style="background:#7c3aed">HN</div>
+          <div><p class="font-semibold text-slate-800 text-sm">Secretaría de Salud</p><p class="text-slate-400 text-xs">Honduras</p></div>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════
+     FOOTER
+══════════════════════════════════════ -->
+<footer style="background:#0a1f6e">
+  <div class="max-w-7xl mx-auto px-6 py-16">
+    <div class="grid md:grid-cols-4 gap-10 mb-12">
+      <div class="md:col-span-2">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-black bg-white/20">C19</div>
+          <span class="font-display font-800 text-white text-lg tracking-tight">Covid<span style="color:#3ab8cc">·</span>Info</span>
+        </div>
+        <p class="text-slate-400 text-sm leading-relaxed mb-5 max-w-xs">
+          Plataforma de información pública sobre COVID-19, desarrollada con base en las guías de organismos de salud nacionales e internacionales.
+        </p>
+        <p class="text-slate-500 text-xs">Este sitio es solo informativo. Para diagnóstico y tratamiento, consulta a un profesional de salud.</p>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold text-sm mb-4">Navegación</h4>
+        <div class="space-y-2">
+          <a href="#que-es" class="block text-slate-400 text-sm hover:text-white transition-colors">¿Qué es el COVID-19?</a>
+          <a href="#sintomas" class="block text-slate-400 text-sm hover:text-white transition-colors">Síntomas</a>
+          <a href="#proteccion" class="block text-slate-400 text-sm hover:text-white transition-colors">Cómo protegerte</a>
+          <a href="#vacunas" class="block text-slate-400 text-sm hover:text-white transition-colors">Vacunas</a>
+          <a href="#recursos" class="block text-slate-400 text-sm hover:text-white transition-colors">Preguntas frecuentes</a>
+        </div>
+      </div>
+      <div>
+        <h4 class="text-white font-semibold text-sm mb-4">Emergencias</h4>
+        <div class="space-y-3">
+          <div class="p-3 rounded-xl" style="background:rgba(232,0,90,.2)">
+            <p class="text-white font-bold text-sm">🚨 Línea COVID Honduras</p>
+            <p class="text-slate-300 text-xs">800-SALUD-HN</p>
+          </div>
+          <div class="p-3 rounded-xl" style="background:rgba(58,184,204,.15)">
+            <p class="text-white font-bold text-sm">💬 WhatsApp OPS</p>
+            <p class="text-slate-300 text-xs">+1 202 974 3000</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <p class="text-slate-500 text-sm">© 2026 Covid·Info — Información basada en guías de la OMS y salud nacional</p>
+      <div class="flex gap-6">
+        <a href="#" class="text-slate-500 text-xs hover:text-white transition-colors">Política de privacidad</a>
+        <a href="#" class="text-slate-500 text-xs hover:text-white transition-colors">Aviso legal</a>
+        <a href="#" class="text-slate-500 text-xs hover:text-white transition-colors">Contacto</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════ -->
+<script>
+  // ── Revelado al desplazarse ────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right').forEach(el => observer.observe(el));
+
+  // ── Escalonado del texto héroe al cargar ───────────
+  document.addEventListener('DOMContentLoaded', () => {
+    const heroItems = document.querySelectorAll('#hero-stagger > *');
+    heroItems.forEach((el, i) => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(24px)';
+      setTimeout(() => {
+        el.style.transition = 'opacity .6s ease, transform .6s cubic-bezier(.22,1,.36,1)';
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      }, 100 + i * 120);
+    });
+  });
+
+  // ── Apertura suave de preguntas frecuentes ─────────
+  document.querySelectorAll('details').forEach(details => {
+    details.addEventListener('toggle', () => {
+      if (details.open) {
+        const content = details.querySelector('div');
+        content.style.maxHeight = '0';
+        content.style.overflow = 'hidden';
+        content.style.transition = 'max-height .4s cubic-bezier(.22,1,.36,1)';
+        requestAnimationFrame(() => { content.style.maxHeight = content.scrollHeight + 'px'; });
+      }
+    });
+  });
+
+  // ── Barra de progreso de desplazamiento ───────────
+  const bar = document.createElement('div');
+  bar.style.cssText = 'position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#e8005a,#1a3eb8,#3ab8cc);z-index:9999;transition:width .1s linear;';
+  document.body.prepend(bar);
+  window.addEventListener('scroll', () => {
+    const pct = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
+    bar.style.width = Math.min(pct, 100) + '%';
+  });
+</script>
+</body>
+</html>
